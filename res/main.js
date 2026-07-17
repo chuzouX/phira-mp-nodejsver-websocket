@@ -23,6 +23,7 @@ const pluginModule = {
         unsubscribers.push(api.events.on('room:gameEnd', () => instance.broadcastRooms()));
         unsubscribers.push(api.events.on('player:connect', () => instance.broadcastRooms()));
         unsubscribers.push(api.events.on('player:disconnect', () => instance.broadcastRooms()));
+        unsubscribers.push(api.events.on('chat:message', () => instance.broadcastRooms()));
         api.logger.info('[websocket] WebSocket 前置插件已加载');
     },
     async destroy() {
