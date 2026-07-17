@@ -24,6 +24,7 @@ const pluginModule = {
         unsubscribers.push(api.events.on('player:connect', () => { api.logger.debug('[websocket] event: player:connect'); instance.broadcastRooms(); }));
         unsubscribers.push(api.events.on('player:disconnect', () => { api.logger.debug('[websocket] event: player:disconnect'); instance.broadcastRooms(); }));
         unsubscribers.push(api.events.on('chat:message', () => { api.logger.debug('[websocket] event: chat:message'); instance.broadcastRooms(); }));
+        unsubscribers.push(api.events.on('protocol:afterHandle', () => { instance.broadcastRooms(); }));
         api.logger.info('[websocket] WebSocket 前置插件已加载');
     },
     async destroy() {

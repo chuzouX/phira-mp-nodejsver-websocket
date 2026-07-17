@@ -356,7 +356,7 @@ class PluginWebSocketServer {
         if (this.broadcastTimer)
             return;
         const now = Date.now();
-        const delay = Math.max(0, 100 - (now - this.lastBroadcastTime));
+        const delay = Math.max(0, 50 - (now - this.lastBroadcastTime));
         this.broadcastTimer = setTimeout(() => {
             this.executeBroadcast();
             this.broadcastTimer = null;
