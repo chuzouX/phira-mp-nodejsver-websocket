@@ -207,8 +207,7 @@ class PluginWebSocketServer {
                     playerCount: room.playerCount,
                     maxPlayers: room.maxPlayers,
                     state: room.state,
-            locked: room.locked,
-            cycle: room.cycle,
+                    locked: room.locked,
                     cycle: room.cycle,
                     isRemote: true,
                     serverName: room.nodeName,
@@ -353,11 +352,7 @@ class PluginWebSocketServer {
         };
     }
     broadcastRooms() {
-        if (this.broadcastTimer) return;
-        this.broadcastTimer = setImmediate(() => {
-            this.executeBroadcast();
-            this.broadcastTimer = null;
-        });
+        this.executeBroadcast();
     }
     executeBroadcast() {
         const adminList = JSON.stringify({ type: 'roomList', payload: this.getSanitizedRoomList(true) });

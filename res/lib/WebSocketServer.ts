@@ -371,11 +371,7 @@ export class PluginWebSocketServer {
   }
 
   public broadcastRooms(): void {
-    if (this.broadcastTimer) return;
-    this.broadcastTimer = setImmediate(() => {
-      this.executeBroadcast();
-      this.broadcastTimer = null;
-    });
+    this.executeBroadcast();
   }
 
   private executeBroadcast(): void {
