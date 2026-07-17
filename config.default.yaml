@@ -1,0 +1,6 @@
+# WebSocket 插件默认配置
+
+# 允许的跨域来源（WebSocket Origin 白名单）
+# 用于反向代理 / CDN 场景，将访问域名加入此列表
+allowedOrigins:
+  - http://localhost:28080
