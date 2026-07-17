@@ -353,15 +353,11 @@ class PluginWebSocketServer {
         };
     }
     broadcastRooms() {
-        if (this.broadcastTimer)
-            return;
-        const now = Date.now();
-        const delay = Math.max(0, 50 - (now - this.lastBroadcastTime));
-        this.broadcastTimer = setTimeout(() => {
+        if (this.broadcastTimer) return;
+        this.broadcastTimer = setImmediate(() => {
             this.executeBroadcast();
             this.broadcastTimer = null;
-            this.lastBroadcastTime = Date.now();
-        }, delay);
+        });
     }
     executeBroadcast() {
         const adminList = JSON.stringify({ type: 'roomList', payload: this.getSanitizedRoomList(true) });

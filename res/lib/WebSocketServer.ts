@@ -372,14 +372,10 @@ export class PluginWebSocketServer {
 
   public broadcastRooms(): void {
     if (this.broadcastTimer) return;
-    const now = Date.now();
-    const delay = Math.max(0, 100 - (now - this.lastBroadcastTime));
-
-    this.broadcastTimer = setTimeout(() => {
+    this.broadcastTimer = setImmediate(() => {
       this.executeBroadcast();
       this.broadcastTimer = null;
-      this.lastBroadcastTime = Date.now();
-    }, delay);
+    });
   }
 
   private executeBroadcast(): void {
