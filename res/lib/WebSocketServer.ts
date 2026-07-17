@@ -39,12 +39,25 @@ export class PluginWebSocketServer {
       if (origin && host) {
         try {
           const originUrl = new URL(origin);
+          const hostname = originUrl.hostname;
+          const hostHeaderHostname = (() => {
+            try { return new URL(`http://${host}`).hostname; } catch { return host; }
+          })();
+
           const isAllowed = (this.config.allowedOrigins ?? []).some((ao: string) => {
-            try { return new URL(ao).host === originUrl.host; } catch { return false; }
+            try {
+              const aoUrl = new URL(ao);
+              return aoUrl.hostname === hostname;
+            } catch { return false; }
           });
 
-          if (!isAllowed && originUrl.host !== host) {
-            this.logger.warn(`WebSocket 握手拒绝: Origin 不匹配 [${origin}] vs Host [${host}]`);
+          const isSameHost = hostname === hostHeaderHostname;
+
+          if (!isAllowed && !isSameHost) {
+            this.logger.warn(
+              `WebSocket 握手拒绝: Origin 不匹配 [${origin}] vs Host [${host}] ` +
+              `(allowedOrigins: ${JSON.stringify(this.config.allowedOrigins ?? [])})`
+            );
             ws.close(1008, 'Policy Violation: Origin mismatch');
             return;
           }
