@@ -25,7 +25,12 @@ class PluginWebSocketServer {
                     const originUrl = new URL(origin);
                     const hostname = originUrl.hostname;
                     const hostHeaderHostname = (() => {
-                        try { return new URL(`http://${host}`).hostname; } catch { return host; }
+                        try {
+                            return new URL(`http://${host}`).hostname;
+                        }
+                        catch {
+                            return host;
+                        }
                     })();
                     const isAllowed = (this.config.allowedOrigins ?? []).some((ao) => {
                         try {
