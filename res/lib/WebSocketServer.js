@@ -299,6 +299,7 @@ class PluginWebSocketServer {
                 chartName: room.selectedChart?.name ?? null,
             },
             locked: room.locked,
+            cycle: room.cycle,
             selectedChart: room.selectedChart,
             lastGameChart: room.lastGameChart,
             messages: room.messages.map(m => {

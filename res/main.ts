@@ -2,6 +2,7 @@ import type { PluginApi, PluginModule } from 'phira-plugin-api';
 import { PluginWebSocketServer } from './lib/WebSocketServer';
 
 let instance: PluginWebSocketServer | undefined;
+const unsubscribers: Array<() => void> = [];
 
 const pluginModule: PluginModule = {
   name: 'websocket',
@@ -28,10 +29,20 @@ const pluginModule: PluginModule = {
       api.federationManager,
     );
 
+    unsubscribers.push(api.events.on('room:create', () => instance!.broadcastRooms()));
+    unsubscribers.push(api.events.on('room:join', () => instance!.broadcastRooms()));
+    unsubscribers.push(api.events.on('room:leave', () => instance!.broadcastRooms()));
+    unsubscribers.push(api.events.on('room:gameStart', () => instance!.broadcastRooms()));
+    unsubscribers.push(api.events.on('room:gameEnd', () => instance!.broadcastRooms()));
+    unsubscribers.push(api.events.on('player:connect', () => instance!.broadcastRooms()));
+    unsubscribers.push(api.events.on('player:disconnect', () => instance!.broadcastRooms()));
+
     api.logger.info('[websocket] WebSocket 前置插件已加载');
   },
 
   async destroy() {
+    unsubscribers.forEach(unsub => unsub());
+    unsubscribers.length = 0;
     instance?.close();
     instance = undefined;
   }
