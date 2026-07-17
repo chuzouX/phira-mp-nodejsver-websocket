@@ -16,14 +16,14 @@ const pluginModule = {
             ...api.config,
             allowedOrigins: pluginConfig.allowedOrigins ?? api.config.allowedOrigins,
         }, api.logger, httpServer.getSessionParser(), api.federationManager);
-        unsubscribers.push(api.events.on('room:create', () => instance.broadcastRooms()));
-        unsubscribers.push(api.events.on('room:join', () => instance.broadcastRooms()));
-        unsubscribers.push(api.events.on('room:leave', () => instance.broadcastRooms()));
-        unsubscribers.push(api.events.on('room:gameStart', () => instance.broadcastRooms()));
-        unsubscribers.push(api.events.on('room:gameEnd', () => instance.broadcastRooms()));
-        unsubscribers.push(api.events.on('player:connect', () => instance.broadcastRooms()));
-        unsubscribers.push(api.events.on('player:disconnect', () => instance.broadcastRooms()));
-        unsubscribers.push(api.events.on('chat:message', () => instance.broadcastRooms()));
+        unsubscribers.push(api.events.on('room:create', () => { api.logger.debug('[websocket] event: room:create'); instance.broadcastRooms(); }));
+        unsubscribers.push(api.events.on('room:join', () => { api.logger.debug('[websocket] event: room:join'); instance.broadcastRooms(); }));
+        unsubscribers.push(api.events.on('room:leave', () => { api.logger.debug('[websocket] event: room:leave'); instance.broadcastRooms(); }));
+        unsubscribers.push(api.events.on('room:gameStart', () => { api.logger.debug('[websocket] event: room:gameStart'); instance.broadcastRooms(); }));
+        unsubscribers.push(api.events.on('room:gameEnd', () => { api.logger.debug('[websocket] event: room:gameEnd'); instance.broadcastRooms(); }));
+        unsubscribers.push(api.events.on('player:connect', () => { api.logger.debug('[websocket] event: player:connect'); instance.broadcastRooms(); }));
+        unsubscribers.push(api.events.on('player:disconnect', () => { api.logger.debug('[websocket] event: player:disconnect'); instance.broadcastRooms(); }));
+        unsubscribers.push(api.events.on('chat:message', () => { api.logger.debug('[websocket] event: chat:message'); instance.broadcastRooms(); }));
         api.logger.info('[websocket] WebSocket 前置插件已加载');
     },
     async destroy() {
