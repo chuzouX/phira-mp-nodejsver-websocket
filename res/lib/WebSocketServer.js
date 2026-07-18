@@ -273,6 +273,7 @@ class PluginWebSocketServer {
             isOwner: this.config.ownerPhiraId.includes(p.user.id),
             rks: p.rks,
             bio: p.bio,
+            title: p._title || null,
         }));
         players.unshift({
             id: -1,
