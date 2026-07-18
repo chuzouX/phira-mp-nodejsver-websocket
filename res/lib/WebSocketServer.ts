@@ -307,6 +307,7 @@ export class PluginWebSocketServer {
       isOwner: false,
       rks: 0,
       bio: 'Phira Multiplayer Server Bot',
+      title: null,
     });
 
     return {
