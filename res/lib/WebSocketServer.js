@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PluginWebSocketServer = void 0;
-const ws_1 = require("ws");
+const WebSocket = require("ws");
 class PluginWebSocketServer {
     constructor(server, roomManager, protocolHandler, config, logger, sessionParser, federationManager) {
         this.roomManager = roomManager;
@@ -12,14 +12,15 @@ class PluginWebSocketServer {
         this.federationManager = federationManager;
         this.lastBroadcastTime = 0;
         this.broadcastTimer = null;
-        this.wss = new ws_1.WebSocketServer({ server });
+        this.wss = new WebSocket.Server({ server });
         this.setupConnectionHandler();
     }
     setupConnectionHandler() {
         this.wss.on('connection', (ws, req) => {
             const origin = req.headers['origin'];
             const forwardedHost = req.headers['x-forwarded-host'];
-            const host = (typeof forwardedHost === 'string' ? forwardedHost : forwardedHost?.[0]) || req.headers['host'];
+            const host = (typeof forwardedHost === 'string' ? forwardedHost : forwardedHost?.[0]) ||
+                req.headers['host'];
             if (origin && host) {
                 try {
                     const originUrl = new URL(origin);
@@ -58,7 +59,11 @@ class PluginWebSocketServer {
             const xForwardedFor = req.headers['x-forwarded-for'];
             const trustHops = this.config.trustProxyHops;
             if (xForwardedFor && trustHops > 0) {
-                const ips = typeof xForwardedFor === 'string' ? xForwardedFor.split(',') : (Array.isArray(xForwardedFor) ? xForwardedFor : []);
+                const ips = typeof xForwardedFor === 'string'
+                    ? xForwardedFor.split(',')
+                    : Array.isArray(xForwardedFor)
+                        ? xForwardedFor
+                        : [];
                 if (ips.length >= trustHops) {
                     ip = ips[ips.length - trustHops].trim();
                 }
@@ -84,7 +89,7 @@ class PluginWebSocketServer {
                     getHeader: () => undefined,
                     setHeader: () => { },
                     writeHead: () => { },
-                    end: () => { }
+                    end: () => { },
                 };
                 this.sessionParser(req, res, (err) => {
                     if (err) {
@@ -157,7 +162,9 @@ class PluginWebSocketServer {
                 ws.send(JSON.stringify({ type: 'roomDetails', payload: null }));
                 return;
             }
-            const details = isRemote ? this.getSanitizedRemoteRoomDetails(room) : this.getSanitizedRoomDetails(room, isAdmin);
+            const details = isRemote
+                ? this.getSanitizedRemoteRoomDetails(room)
+                : this.getSanitizedRoomDetails(room, isAdmin);
             ws.send(JSON.stringify({ type: 'roomDetails', payload: details }));
         }
         else {
@@ -166,8 +173,9 @@ class PluginWebSocketServer {
         }
     }
     getSanitizedRoomList(isAdmin = false) {
-        const localRooms = this.roomManager.listRooms()
-            .filter(room => {
+        const localRooms = this.roomManager
+            .listRooms()
+            .filter((room) => {
             if (isAdmin)
                 return true;
             if (this.config.enablePubWeb)
@@ -176,7 +184,7 @@ class PluginWebSocketServer {
                 return !room.id.startsWith(this.config.priPrefix);
             return true;
         })
-            .map(room => {
+            .map((room) => {
             const owner = room.players.get(room.ownerId);
             return {
                 id: room.id,
@@ -199,11 +207,11 @@ class PluginWebSocketServer {
         let remoteRooms = [];
         if (this.federationManager) {
             try {
-                remoteRooms = this.federationManager.getRemoteRooms().map(room => ({
+                remoteRooms = this.federationManager.getRemoteRooms().map((room) => ({
                     id: room.id,
                     name: room.name,
                     ownerId: room.ownerId,
-                    ownerName: room.players.find(p => p.id === room.ownerId)?.name || 'Unknown',
+                    ownerName: room.players.find((p) => p.id === room.ownerId)?.name || 'Unknown',
                     playerCount: room.playerCount,
                     maxPlayers: room.maxPlayers,
                     state: room.state,
@@ -262,7 +270,7 @@ class PluginWebSocketServer {
         };
     }
     getSanitizedRoomDetails(room, isAdmin = false) {
-        const players = Array.from(room.players.values()).map(p => ({
+        const players = Array.from(room.players.values()).map((p) => ({
             id: p.user.id,
             name: p.user.name,
             avatar: p.avatar,
@@ -303,19 +311,21 @@ class PluginWebSocketServer {
             cycle: room.cycle,
             selectedChart: room.selectedChart,
             lastGameChart: room.lastGameChart,
-            messages: room.messages.map(m => {
+            messages: room.messages.map((m) => {
                 const userId = m.user;
                 let userName = '';
                 if (userId !== undefined) {
                     const user = room.players.get(userId);
-                    userName = userId === -1 ? this.config.serverName : (user ? user.user.name : `ID: ${userId}`);
+                    userName =
+                        userId === -1 ? this.config.serverName : user ? user.user.name : `ID: ${userId}`;
                 }
                 return { ...m, userName };
             }),
             players,
             otherRooms: [
-                ...this.roomManager.listRooms()
-                    .filter(r => {
+                ...this.roomManager
+                    .listRooms()
+                    .filter((r) => {
                     if (r.id === room.id)
                         return false;
                     if (isAdmin)
@@ -326,7 +336,7 @@ class PluginWebSocketServer {
                         return !r.id.startsWith(this.config.priPrefix);
                     return true;
                 })
-                    .map(r => ({
+                    .map((r) => ({
                     id: r.id,
                     name: r.name,
                     playerCount: r.players.size,
@@ -339,17 +349,20 @@ class PluginWebSocketServer {
                     isRemote: false,
                     serverName: this.config.serverName,
                 })),
-                ...(this.federationManager ? this.federationManager.getRemoteRooms()
-                    .filter(r => r.id !== room.id)
-                    .map(r => ({
-                    id: r.id,
-                    name: r.name,
-                    playerCount: r.playerCount,
-                    maxPlayers: r.maxPlayers,
-                    state: r.state,
-                    isRemote: true,
-                    serverName: r.nodeName,
-                })) : []),
+                ...(this.federationManager
+                    ? this.federationManager
+                        .getRemoteRooms()
+                        .filter((r) => r.id !== room.id)
+                        .map((r) => ({
+                        id: r.id,
+                        name: r.name,
+                        playerCount: r.playerCount,
+                        maxPlayers: r.maxPlayers,
+                        state: r.state,
+                        isRemote: true,
+                        serverName: r.nodeName,
+                    }))
+                    : []),
             ],
         };
     }
@@ -357,10 +370,16 @@ class PluginWebSocketServer {
         this.executeBroadcast();
     }
     executeBroadcast() {
-        const adminList = JSON.stringify({ type: 'roomList', payload: this.getSanitizedRoomList(true) });
-        const publicList = JSON.stringify({ type: 'roomList', payload: this.getSanitizedRoomList(false) });
+        const adminList = JSON.stringify({
+            type: 'roomList',
+            payload: this.getSanitizedRoomList(true),
+        });
+        const publicList = JSON.stringify({
+            type: 'roomList',
+            payload: this.getSanitizedRoomList(false),
+        });
         this.wss.clients.forEach((client) => {
-            if (client.readyState === ws_1.WebSocket.OPEN) {
+            if (client.readyState === WebSocket.OPEN) {
                 client.send(client.isAdmin ? adminList : publicList, (error) => {
                     if (error)
                         this.logger.error(`向客户端广播房间列表失败: ${error}`);
@@ -373,8 +392,8 @@ class PluginWebSocketServer {
             type: 'serverStats',
             payload: { totalPlayers: this.protocolHandler.getSessionCount() },
         });
-        this.wss.clients.forEach(client => {
-            if (client.readyState === ws_1.WebSocket.OPEN) {
+        this.wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
                 client.send(serializedMessage, (error) => {
                     if (error)
                         this.logger.error(`向客户端广播服务器统计信息失败: ${error}`);
@@ -384,8 +403,8 @@ class PluginWebSocketServer {
     }
     broadcast(type, payload) {
         const serializedMessage = JSON.stringify({ type, payload });
-        this.wss.clients.forEach(client => {
-            if (client.readyState === ws_1.WebSocket.OPEN) {
+        this.wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
                 client.send(serializedMessage, (error) => {
                     if (error)
                         this.logger.error(`向客户端广播插件消息失败: ${error}`);

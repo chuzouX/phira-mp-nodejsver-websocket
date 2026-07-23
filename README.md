@@ -69,6 +69,7 @@ api.broadcast('myEvent', { data: 'hello' });
 本插件无依赖，是基础服务插件，为 web-dashboard 和其他插件提供 WebSocket 通信能力。
 
 插件加载顺序：
+
 1. **websocket** (无依赖，最先加载)
 2. web-dashboard (依赖 websocket)
 
@@ -76,5 +77,5 @@ api.broadcast('myEvent', { data: 'hello' });
 
 - **插件 ID**: websocket
 - **UUID**: c8d4e5f6-9a2b-4c7d-8e1f-3a9b6c5d7e2a
-- **版本**: 1.0.0
+- **版本**: 1.2.1
 - **依赖**: 无

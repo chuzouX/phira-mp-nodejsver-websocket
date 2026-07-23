@@ -1,7 +1,14 @@
 import { Server as HttpServer, IncomingMessage } from 'http';
-import { WebSocketServer as WsServer, WebSocket } from 'ws';
+import WebSocket = require('ws');
 import express from 'express';
-import type { Logger, RoomManager, Room, ProtocolHandler, ServerConfig, FederationManager } from 'phira-plugin-api';
+import type {
+  Logger,
+  RoomManager,
+  Room,
+  ProtocolHandler,
+  ServerConfig,
+  FederationManager,
+} from 'phira-plugin-api';
 
 interface WebSocketMessage {
   type: string;
@@ -13,7 +20,7 @@ interface ExtWebSocket extends WebSocket {
 }
 
 export class PluginWebSocketServer {
-  private readonly wss: WsServer;
+  private readonly wss: WebSocket.Server;
   private lastBroadcastTime = 0;
   private broadcastTimer: NodeJS.Timeout | null = null;
 
@@ -26,7 +33,7 @@ export class PluginWebSocketServer {
     private readonly sessionParser: express.RequestHandler,
     private readonly federationManager?: FederationManager,
   ) {
-    this.wss = new WsServer({ server });
+    this.wss = new WebSocket.Server({ server });
     this.setupConnectionHandler();
   }
 
@@ -34,21 +41,29 @@ export class PluginWebSocketServer {
     this.wss.on('connection', (ws: ExtWebSocket, req: IncomingMessage) => {
       const origin = req.headers['origin'];
       const forwardedHost = req.headers['x-forwarded-host'];
-      const host = (typeof forwardedHost === 'string' ? forwardedHost : forwardedHost?.[0]) || req.headers['host'];
+      const host =
+        (typeof forwardedHost === 'string' ? forwardedHost : forwardedHost?.[0]) ||
+        req.headers['host'];
 
       if (origin && host) {
         try {
           const originUrl = new URL(origin);
           const hostname = originUrl.hostname;
           const hostHeaderHostname = (() => {
-            try { return new URL(`http://${host}`).hostname; } catch { return host; }
+            try {
+              return new URL(`http://${host}`).hostname;
+            } catch {
+              return host;
+            }
           })();
 
           const isAllowed = (this.config.allowedOrigins ?? []).some((ao: string) => {
             try {
               const aoUrl = new URL(ao);
               return aoUrl.hostname === hostname;
-            } catch { return false; }
+            } catch {
+              return false;
+            }
           });
 
           const isSameHost = hostname === hostHeaderHostname;
@@ -56,7 +71,7 @@ export class PluginWebSocketServer {
           if (!isAllowed && !isSameHost) {
             this.logger.warn(
               `WebSocket 握手拒绝: Origin 不匹配 [${origin}] vs Host [${host}] ` +
-              `(allowedOrigins: ${JSON.stringify(this.config.allowedOrigins ?? [])})`
+                `(allowedOrigins: ${JSON.stringify(this.config.allowedOrigins ?? [])})`,
             );
             ws.close(1008, 'Policy Violation: Origin mismatch');
             return;
@@ -72,7 +87,12 @@ export class PluginWebSocketServer {
       const trustHops = this.config.trustProxyHops;
 
       if (xForwardedFor && trustHops > 0) {
-        const ips = typeof xForwardedFor === 'string' ? xForwardedFor.split(',') : (Array.isArray(xForwardedFor) ? xForwardedFor : []);
+        const ips =
+          typeof xForwardedFor === 'string'
+            ? xForwardedFor.split(',')
+            : Array.isArray(xForwardedFor)
+              ? xForwardedFor
+              : [];
         if (ips.length >= trustHops) {
           ip = ips[ips.length - trustHops].trim();
         } else if (ips.length > 0) {
@@ -99,7 +119,7 @@ export class PluginWebSocketServer {
           getHeader: () => undefined,
           setHeader: () => {},
           writeHead: () => {},
-          end: () => {}
+          end: () => {},
         } as any;
 
         (this.sessionParser as any)(req, res, (err?: any) => {
@@ -112,7 +132,9 @@ export class PluginWebSocketServer {
           ws.isAdmin = isAdmin;
 
           try {
-            ws.send(JSON.stringify({ type: 'roomList', payload: this.getSanitizedRoomList(isAdmin) }));
+            ws.send(
+              JSON.stringify({ type: 'roomList', payload: this.getSanitizedRoomList(isAdmin) }),
+            );
             this.sendStats(ws);
           } catch (error) {
             this.logger.error(`向 WebSocket 客户端发送初始数据失败: ${error}`);
@@ -175,7 +197,9 @@ export class PluginWebSocketServer {
         return;
       }
 
-      const details = isRemote ? this.getSanitizedRemoteRoomDetails(room) : this.getSanitizedRoomDetails(room, isAdmin);
+      const details = isRemote
+        ? this.getSanitizedRemoteRoomDetails(room)
+        : this.getSanitizedRoomDetails(room, isAdmin);
       ws.send(JSON.stringify({ type: 'roomDetails', payload: details }));
     } else {
       ws.send(JSON.stringify({ type: 'roomDetails', payload: null }));
@@ -184,14 +208,15 @@ export class PluginWebSocketServer {
   }
 
   private getSanitizedRoomList(isAdmin: boolean = false): any[] {
-    const localRooms = this.roomManager.listRooms()
-      .filter(room => {
+    const localRooms = this.roomManager
+      .listRooms()
+      .filter((room) => {
         if (isAdmin) return true;
         if (this.config.enablePubWeb) return room.id.startsWith(this.config.pubPrefix);
         if (this.config.enablePriWeb) return !room.id.startsWith(this.config.priPrefix);
         return true;
       })
-      .map(room => {
+      .map((room) => {
         const owner = room.players.get(room.ownerId);
         return {
           id: room.id,
@@ -215,11 +240,11 @@ export class PluginWebSocketServer {
     let remoteRooms: any[] = [];
     if (this.federationManager) {
       try {
-        remoteRooms = this.federationManager.getRemoteRooms().map(room => ({
+        remoteRooms = this.federationManager.getRemoteRooms().map((room) => ({
           id: room.id,
           name: room.name,
           ownerId: room.ownerId,
-          ownerName: room.players.find(p => p.id === room.ownerId)?.name || 'Unknown',
+          ownerName: room.players.find((p) => p.id === room.ownerId)?.name || 'Unknown',
           playerCount: room.playerCount,
           maxPlayers: room.maxPlayers,
           state: room.state,
@@ -282,7 +307,7 @@ export class PluginWebSocketServer {
   }
 
   private getSanitizedRoomDetails(room: Room, isAdmin: boolean = false) {
-    const players = Array.from(room.players.values()).map(p => ({
+    const players = Array.from(room.players.values()).map((p) => ({
       id: p.user.id,
       name: p.user.name,
       avatar: p.avatar,
@@ -325,26 +350,28 @@ export class PluginWebSocketServer {
       cycle: room.cycle,
       selectedChart: room.selectedChart,
       lastGameChart: room.lastGameChart,
-      messages: room.messages.map(m => {
+      messages: room.messages.map((m) => {
         const userId = (m as any).user;
         let userName = '';
         if (userId !== undefined) {
           const user = room.players.get(userId);
-          userName = userId === -1 ? this.config.serverName : (user ? user.user.name : `ID: ${userId}`);
+          userName =
+            userId === -1 ? this.config.serverName : user ? user.user.name : `ID: ${userId}`;
         }
         return { ...m, userName };
       }),
       players,
       otherRooms: [
-        ...this.roomManager.listRooms()
-          .filter(r => {
+        ...this.roomManager
+          .listRooms()
+          .filter((r) => {
             if (r.id === room.id) return false;
             if (isAdmin) return true;
             if (this.config.enablePubWeb) return r.id.startsWith(this.config.pubPrefix);
             if (this.config.enablePriWeb) return !r.id.startsWith(this.config.priPrefix);
             return true;
           })
-          .map(r => ({
+          .map((r) => ({
             id: r.id,
             name: r.name,
             playerCount: r.players.size,
@@ -357,17 +384,20 @@ export class PluginWebSocketServer {
             isRemote: false,
             serverName: this.config.serverName,
           })),
-        ...(this.federationManager ? this.federationManager.getRemoteRooms()
-          .filter(r => r.id !== room.id)
-          .map(r => ({
-            id: r.id,
-            name: r.name,
-            playerCount: r.playerCount,
-            maxPlayers: r.maxPlayers,
-            state: r.state,
-            isRemote: true,
-            serverName: r.nodeName,
-          })) : []),
+        ...(this.federationManager
+          ? this.federationManager
+              .getRemoteRooms()
+              .filter((r) => r.id !== room.id)
+              .map((r) => ({
+                id: r.id,
+                name: r.name,
+                playerCount: r.playerCount,
+                maxPlayers: r.maxPlayers,
+                state: r.state,
+                isRemote: true,
+                serverName: r.nodeName,
+              }))
+          : []),
       ],
     };
   }
@@ -377,8 +407,14 @@ export class PluginWebSocketServer {
   }
 
   private executeBroadcast(): void {
-    const adminList = JSON.stringify({ type: 'roomList', payload: this.getSanitizedRoomList(true) });
-    const publicList = JSON.stringify({ type: 'roomList', payload: this.getSanitizedRoomList(false) });
+    const adminList = JSON.stringify({
+      type: 'roomList',
+      payload: this.getSanitizedRoomList(true),
+    });
+    const publicList = JSON.stringify({
+      type: 'roomList',
+      payload: this.getSanitizedRoomList(false),
+    });
 
     this.wss.clients.forEach((client: ExtWebSocket) => {
       if (client.readyState === WebSocket.OPEN) {
@@ -395,7 +431,7 @@ export class PluginWebSocketServer {
       payload: { totalPlayers: this.protocolHandler.getSessionCount() },
     });
 
-    this.wss.clients.forEach(client => {
+    this.wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(serializedMessage, (error) => {
           if (error) this.logger.error(`向客户端广播服务器统计信息失败: ${error}`);
@@ -406,7 +442,7 @@ export class PluginWebSocketServer {
 
   public broadcast(type: string, payload: any): void {
     const serializedMessage = JSON.stringify({ type, payload });
-    this.wss.clients.forEach(client => {
+    this.wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(serializedMessage, (error) => {
           if (error) this.logger.error(`向客户端广播插件消息失败: ${error}`);
@@ -416,10 +452,12 @@ export class PluginWebSocketServer {
   }
 
   private sendStats(ws: WebSocket): void {
-    ws.send(JSON.stringify({
-      type: 'serverStats',
-      payload: { totalPlayers: this.protocolHandler.getSessionCount() },
-    }));
+    ws.send(
+      JSON.stringify({
+        type: 'serverStats',
+        payload: { totalPlayers: this.protocolHandler.getSessionCount() },
+      }),
+    );
   }
 
   public close(): void {
